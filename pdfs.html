@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Combine PDF Files</title>
+    <link rel="stylesheet" type="text/css" href="/utils/css/bootstrap.min.css" />
+    <script src="https://unpkg.com/pdf-lib"></script>
+    <style>
+        body {
+            background-color: #F4F8FB;
+            background: linear-gradient(to right, #f4f8fb, #dff1ff);
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            margin-top: 20px;
+        }
+        .btn-warning {
+            margin-top: 10px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h3 class="text-center" style="font-weight: bold;">合并 PDF 文件</h3>
+
+        <div class="input-group col-md-6" id="chooseFile">
+            <div class="custom-file">
+                <input type="file" class="custom-file-input" id="fileInput" accept=".pdf" multiple>
+                <label class="custom-file-label" for="fileInput">选择多个 PDF 文件</label>
+            </div>
+        </div>
+
+        <div style="display: flex; margin-top: 15px;">
+            <button id="combineBtn" class="btn btn-warning" style="display:none;"> 合并 PDF </button>
+            <button id="uploadNewBtn" class="btn btn-secondary" style="display:none;">选择其他文件</button>
+        </div>
+
+    </div>
+
+    <script type="text/javascript">
+        let pdfFiles = []; // Store the uploaded PDF files
+
+        document.getElementById('fileInput').addEventListener('change', function() {
+            const fileInput = document.getElementById('fileInput');
+            const files = fileInput.files;
+
+            if (files.length > 0) {
+                pdfFiles = Array.from(files);
+                document.getElementById('combineBtn').style.display = 'block'; // Show the Combine button
+                document.getElementById('uploadNewBtn').style.display = 'block'; // Show the Upload New button
+            }
+        });
+
+        // Combine PDFs function
+        document.getElementById('combineBtn').addEventListener('click', async function() {
+            if (pdfFiles.length === 0) {
+                alert("请上传一些 PDF 文件！");
+                return;
+            }
+
+            try {
+                // Create a new PDF document
+                const combinedPdf = await PDFLib.PDFDocument.create();
+
+                // Loop through the uploaded PDF files
+                for (const pdfFile of pdfFiles) {
+                    const pdfBytes = await pdfFile.arrayBuffer();
+                    const pdfDoc = await PDFLib.PDFDocument.load(pdfBytes);
+
+                    // Copy pages from each PDF and add to the combined PDF
+                    const copiedPages = await combinedPdf.copyPages(pdfDoc, pdfDoc.getPages().map((_, index) => index));
+                    copiedPages.forEach(page => combinedPdf.addPage(page));
+                }
+
+                // Serialize the combined PDF and trigger a download
+                const pdfBytesCombined = await combinedPdf.save();
+                const pdfBlob = new Blob([pdfBytesCombined], { type: 'application/pdf' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(pdfBlob);
+                link.download = 'combined.pdf';
+                link.click();
+
+            } catch (error) {
+                console.error('Error combining PDFs:', error);
+                alert("合并 PDF 时发生错误！");
+            }
+        });
+
+        document.getElementById('uploadNewBtn').addEventListener('click', function() {
+            // Reset the page for a new file selection
+            location.reload();
+        });
+    </script>
+
+</body>
+</html>
